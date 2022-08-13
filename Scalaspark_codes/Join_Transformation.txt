@@ -1,0 +1,224 @@
+1. In the path "/home/training/training_materials", create the following file as emp.txt :
+vi emp.txt
+"empno","ename","job","mgr","hiredate","sal","comm","deptno"
+"7369","SMITH","CLERK","7902","17-12-1980","800","","20"
+"7499","ALLEN","SALESMAN","7698","20-2-1981","1600","300","30"
+"7521","WARD","SALESMAN","7698","22-2-1981","1250","500","30"
+"7566","JONES","MANAGER","7839","2-4-1981","2975","","20"
+"7654","MARTIN","SALESMAN","7698","28-9-1981","1250","1400","30"
+"7698","BLAKE","MANAGER","7839","1-5-1981","2850","","30"
+"7782","CLARK","MANAGER","7839","9-6-1981","2450","","10"
+"7788","SCOTT","ANALYST","7566","13-JUL-87","3000","","20"
+"7839","KING","PRESIDENT","","17-11-1981","5000","","10"
+"7844","TURNER","SALESMAN","7698","8-9-1981","1500","0","30"
+"7876","ADAMS","CLERK","7788","13-JUL-87","1100","","20"
+"7900","JAMES","CLERK","7698","3-12-1981","950","","30"
+"7902","FORD","ANALYST","7566","3-12-1981","3000","","20"
+"7934","MILLER","CLERK","7782","23-1-1982","1300","","10"
+
+2. In the path "/home/training/training_materials", create the following file as dept.txt :
+vi dept.txt
+"deptno","dname","loc"
+"10","ACCOUNTS","MUMBAI"
+"20","SALES","PUNE"
+"30","IT","BANGALORE"
+"40","TESTING","NOIDA"
+"50","HR","DELHI"
+
+3. Copy the file to the default HDFS folder /user/training/ :
+hadoop fs -put emp.txt /user/training/emp.txt
+hadoop fs -put dept.txt /user/training/emp.txt
+
+4. Verify whether the file has been copied to the correct path
+hadoop fs -ls
+
+========= Work on Join Operation using Spark ==============
+
+1. Start the spark-shell :
+spark-shell
+
+2.One of the way to create a Spark SQL context :
+ 
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+	 
+import sqlContext.implicits._
+
+3. Create emp and dept RDD and both files :
+val emp=sc.textFile("/user/training/emp.txt")
+	
+val dept=sc.textFile("/user/training/dept.txt")
+
+4. Kount number of records from the both files 	
+emp.count()
+dept.count()
+ 
+5. Display all records including header of the RDD.
+emp.collect()
+dept.collect()
+
+6. Display all records in proper format from emp and dept RDD.
+
+emp.foreach(println)
+
+Following is the output of above command 
+"empno","ename","job","mgr","hiredate","sal","comm","deptno"
+"7369","SMITH","CLERK","7902","17-12-1980","800","","20"
+"7499","ALLEN","SALESMAN","7698","20-2-1981","1600","300","30"
+"7521","WARD","SALESMAN","7698","22-2-1981","1250","500","30"
+"7566","JONES","MANAGER","7839","2-4-1981","2975","","20"
+"7654","MARTIN","SALESMAN","7698","28-9-1981","1250","1400","30"
+"7698","BLAKE","MANAGER","7839","1-5-1981","2850","","30"
+"7782","CLARK","MANAGER","7839","9-6-1981","2450","","10"
+"7788","SCOTT","ANALYST","7566","13-JUL-87","3000","","20"
+"7839","KING","PRESIDENT","","17-11-1981","5000","","10"
+"7844","TURNER","SALESMAN","7698","8-9-1981","1500","0","30"
+"7876","ADAMS","CLERK","7788","13-JUL-87","1100","","20"
+"7900","JAMES","CLERK","7698","3-12-1981","950","","30"
+"7902","FORD","ANALYST","7566","3-12-1981","3000","","20"
+"7934","MILLER","CLERK","7782","23-1-1982","1300","","10"
+
+Following is the output of above command
+dept.foreach(println)
+"deptno","dname","loc"
+"10","ACCOUNTS","MUMBAI"
+"20","SALES","PUNE"
+"30","IT","BANGALORE"
+"40","TESTING","NOIDA"
+"50","HR","DELHI"
+
+ 8.Extract first element of the RDD and assigned to header 
+val header=emp.first()
+header: String = "empno","ename","job","mgr","hiredate","sal","comm","deptno"
+
+val headerd=dept.first()
+headerd: String = "deptno","dname","loc"
+
+9. Filter all data and assigned to empdata and deptdata other than header. 
+
+val empdata=emp.filter(a=>a!=header)
+	 
+val deptdata=dept.filter(a=>a!=headerd)
+	 
+	 
+10. Eech Record of RDD "emp" is treated as "a" and while creating RDD "empdata" only those lines or a are considered where a!=header
+ 
+empdata.collect()
+empdata.count()
+empdata.foreach(println)
+
+deptdata.collect()
+deptdata.count()
+deptdata.foreach(println)
+
+11. Create a Schema of Employee and Dept for reference 
+Creating a schema :
+case class employees(empno:String, ename:String, job:String, mgr:String, hiredate:String, sal:String, comm:String, deptno:String)
+
+case class departments(deptno:String, dname:String, loc:String)
+
+12. Creating 2 RDD which are delimated by comma (,) 
+ 
+val edata=empdata.map(_.split(","))
+ 
+
+val ddata=deptdata.map(_.split(","))
+
+13. Kount number of records from both RDD *These RDD consists of all elements other than header 
+ 
+edata.count()
+ddata.count()
+edata.collect()
+ddata.collect()
+
+14. Refer Schema from employee 
+
+val epdata=edata.map(p=>employees(p(0),p(1),p(2),p(3),p(4),p(5),p(6),p(7)))
+ 
+val dpdata=ddata.map(p=>departments(p(0),p(1),p(2)))
+
+15. Print above RDD in proper format
+epdata.foreach(println)
+employees("7369","SMITH","CLERK","7902","17-12-1980","800","","20")
+employees("7499","ALLEN","SALESMAN","7698","20-2-1981","1600","300","30")
+employees("7521","WARD","SALESMAN","7698","22-2-1981","1250","500","30")
+employees("7566","JONES","MANAGER","7839","2-4-1981","2975","","20")
+employees("7654","MARTIN","SALESMAN","7698","28-9-1981","1250","1400","30")
+employees("7698","BLAKE","MANAGER","7839","1-5-1981","2850","","30")
+employees("7782","CLARK","MANAGER","7839","9-6-1981","2450","","10")
+employees("7788","SCOTT","ANALYST","7566","13-JUL-87","3000","","20")
+employees("7839","KING","PRESIDENT","","17-11-1981","5000","","10")
+employees("7844","TURNER","SALESMAN","7698","8-9-1981","1500","0","30")
+employees("7876","ADAMS","CLERK","7788","13-JUL-87","1100","","20")
+employees("7900","JAMES","CLERK","7698","3-12-1981","950","","30")
+employees("7902","FORD","ANALYST","7566","3-12-1981","3000","","20")
+employees("7934","MILLER","CLERK","7782","23-1-1982","1300","","10")
+
+dpdata.foreach(println)
+departments("10","ACCOUNTS","MUMBAI")
+departments("20","SALES","PUNE")
+departments("30","IT","BANGALORE")
+departments("40","TESTING","NOIDA")
+departments("50","HR","DELHI")
+**********************************************************************
+16. Creat Datafram based on RDD \
+
+val emprows=epdata.toDF()
+
+val deptrows=dpdata.toDF()
+
+17. Print the Schema of both Dataframe 
+
+emprows.printSchema()
+root
+ |-- empno: string (nullable = true)
+ |-- ename: string (nullable = true)
+ |-- job: string (nullable = true)
+ |-- mgr: string (nullable = true)
+ |-- hiredate: string (nullable = true)
+ |-- sal: string (nullable = true)
+ |-- comm: string (nullable = true)
+ |-- deptno: string (nullable = true)
+
+
+deptrows.printSchema()
+root
+ |-- deptno: string (nullable = true)
+ |-- dname: string (nullable = true)
+ |-- loc: string (nullable = true)
+
+18. Kount the Records from both Dataframe
+
+emprows.count()
+
+deptrows.count()
+ 
+19. Registering the DataFrame "emprows" as a temporary Table named "emptable: to support SQL-type queries :
+
+
+emprows.registerTempTable("emptable")
+or
+epdata.toDF().registerTempTable("emptable1")
+
+Registering the DataFrame "deptrows" as a temporary Table named "depttable: to support SQL-type queries :
+deptrows.registerTempTable("depttable")
+
+20. Grouping Records based on department number and display the result 
+val result1=sqlContext.sql("select deptno, count(*) as abc from emptable group by deptno")
+
+result1.collect
+Array[org.apache.spark.sql.Row] = Array(["20",5], ["10",3], ["30",6])
+ 
+val result2=sqlContext.sql("select * from depttable")
+result2: org.apache.spark.sql.DataFrame = [deptno: string, dname: string, loc: string]
+
+result2.collect
+Array[org.apache.spark.sql.Row] = Array(["10","ACCOUNTS","MUMBAI"], ["20","SALES","PUNE"], ["30","IT","BANGALORE"], ["40","TESTING","NOIDA"], ["50","HR","DELHI"])
+
+21. Join both Department table and deptartment table 
+
+val result3=sqlContext.sql("select d.deptno,d.dname, count(*) as emp_count from emptable e join depttable d on e.deptno=d.deptno group by d.deptno, d.dname")
+result3: org.apache.spark.sql.DataFrame = [deptno: string, dname: string, emp_count: bigint]
+
+result3.collect
+res36: Array[org.apache.spark.sql.Row] = Array(["20","SALES",5], ["30","IT",6], ["10","ACCOUNTS",3])
+

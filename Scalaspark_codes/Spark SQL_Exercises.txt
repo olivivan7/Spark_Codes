@@ -1,0 +1,385 @@
+﻿Create Emp file in LFS usinf terminal;
+--------------------------------------
+vi emp.txt
+
+"empno","ename","job","mgr","hiredate","sal","comm","deptno"
+"7369","SMITH","CLERK","7902","17-12-1980","800","","20"
+"7499","ALLEN","SALESMAN","7698","20-2-1981","1600","300","30"
+"7521","WARD","SALESMAN","7698","22-2-1981","1250","500","30"
+"7566","JONES","MANAGER","7839","2-4-1981","2975","","20"
+"7654","MARTIN","SALESMAN","7698","28-9-1981","1250","1400","30"
+"7698","BLAKE","MANAGER","7839","1-5-1981","2850","","30"
+"7782","CLARK","MANAGER","7839","9-6-1981","2450","","10"
+"7788","SCOTT","ANALYST","7566","13-JUL-87","3000","","20"
+"7839","KING","PRESIDENT","","17-11-1981","5000","","10"
+"7844","TURNER","SALESMAN","7698","8-9-1981","1500","0","30"
+"7876","ADAMS","CLERK","7788","13-JUL-87","1100","","20"
+"7900","JAMES","CLERK","7698","3-12-1981","950","","30"
+"7902","FORD","ANALYST","7566","3-12-1981","3000","","20"
+"7934","MILLER","CLERK","7782","23-1-1982","1300","","10"
+
+Put EMP file in to hadoop
+--------------------------
+hadoop fs -put emp.txt /user/training/
+
+Start Spark-Shell
+
+Bring Spark SQL Context:
+------------------------
+One of the way to create a Spark SQL context :
+At the spark-Shell :
+
+val sqlContext100 = new org.apache.spark.sql.SQLContext(sc)
+
+SQL Context is Ready;
+---------------------
+Create an RDD:
+--------------
+val emp=sc.textFile("/user/training/emp.txt")
+
+Count Number of Records in EMP File:
+------------------------------------
+emp.Count()
+
+Print EMP Records
+-----------------
+emp.collect()
+
+Formatted Printing:
+--------------------
+emp.foreach(println)
+
+Extract Column Headers from the File:
+------------------------------------
+emp.first()
+
+To Skip First Header Row from EMP File
+----------------------------------------------------------------------------
+val header=emp.first()
+
+val empdata=emp.filter(a=>a!=header)
+
+Each line of RDD "emp" is treated as "a" and while creating RDD "empdata" only those lines or a are considered where a!=header
+ 
+empdata.collect()
+empdata.count()
+empdata.foreach(println)
+
+
+Creating a schema :
+------------------------
+case class employees(empno:String, ename:String, job:String, mgr:String, hiredate:String, sal:String, comm:String, deptno:String)
+
+defined class employees
+
+Starting the process of Creating a Dataframe :
+
+val edata=empdata.map(_.split(","))
+
+OR
+
+val edata=empdata.map(x=>x.split(‘,’))
+
+edata: org.apache.spark.rdd.RDD[Array[String]]
+
+edata.count()
+ 
+edata.collect()
+
+edata.foreach(println)
+
+val epdata=edata.map(p=>employees(p(0),p(1),p(2),p(3),p(4),p(5),p(6),p(7)))
+
+epdata.count()
+
+epdata.foreach(println)
+
+edata.foreach(println)
+
+Using the RDD.toDF() to convert a RDD to a Data-Frame :
+-------------------------------------------------------
+val emprows=epdata.toDF()
+
+To Print the schema :
+---------------------
+emprows.printSchema()
+
+
+Count:
+-------
+emprows.count()
+
+
+To find the distinct number of departments :
+----------------------------------------------
+emprows.select("deptno","job").distinct.count
+
+
+To find the distinct number of jobs :
+----------------------------------------
+emprows.select("job").distinct.count
+
+
+emprows.select("deptno").distinct.collect()
+
+	
+OR
+
+val a= emprows.select("deptno").distinct.collect()
+
+a.foreach(println)
+
+emprows.select("deptno","job").distinct.collect
+	
+emprows.select("deptno","job").distinct.count
+	
+emprows.groupBy("deptno").count.show
+
+or
+
+val x = emprows.groupBy("deptno").count
+
+x.collect
+
+emprows.groupBy("deptno","job").count.show
+
+or
+
+val y =emprows.groupBy("deptno","job").count
+	
+y.collect
+
+emprows.groupBy("deptno").count.agg(min("count"),max("count"),avg("count"),sum("count")).show
+
+OR
+
+val a= emprows.groupBy("deptno").count.agg(min("count"),max("count"),avg("count")).show
+
+val a= emprows.groupBy("deptno").count.agg(min("count"),max("count"),avg("count"))
+
+a.collect
+
+Registering the DataFrame "emprows" as a temporary Table named "emptable"
+-------------------------------------------------------------------------
+To support SQL-type queries :
+----------------------------
+emprows.registerTempTable("emptable")
+
+val result1=sqlContext100.sql("select deptno, count(empno) as emp_nos from emptable group by deptno order by emp_nos desc").show
+
+result1.collect
+
+--The entry point into all functionality in Spark SQL is the SQLContext class, 
+or one of its descendants. To create a basic SQLContext, all you need is a SparkContext.
+
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+	
+import sqlContext.implicits._
+
+case class employees(empno:String, ename:String, job:String, mgr:String, hiredate:String, sal:String, comm:String, deptno:String)
+
+defined class employees
+
+val emp=sc.textFile("/user/training/emp.txt")
+
+val header=emp.first()
+
+val empdata=emp.filter(a=>a!=header)
+
+val edata=empdata.map(_.split(","))
+
+val epdata=edata.map(p=>employees(p(0),p(1),p(2),p(3),p(4),p(5),p(6),p(7)))
+
+val emprows=epdata.toDF()
+
+emprows.registerTempTable("emptable")
+
+emprows.registerTempTable("emprows")
+
+val result1=sqlContext.sql("select ename from emprows")
+
+val result2=sqlContext.sql("select * from emptable")
+
+result1.collect()
+
+A Row is shown in [] as an element of an array
+
+result2.collect()
+
+val result3=sqlContext.sql("select deptno, count(*) totsal from emprows group by deptno")
+
+result3.collect
+
+OR
+
+sqlContext.sql("select deptno, count(*) totsal from emprows group by deptno").show
+
+---------------------------
+Joining Two files:
+---------------------------
+--emp.txt is Available on LFS
+
+--Copy the file to the default HDFS folder /user/training/ :
+
+hadoop fs -put emp.txt
+hadoop fs -put dept.txt
+
+--Verify whether the file has been copied to the correct path
+hadoop fs -ls
+
+--Open spark-shell :
+spark-shell
+
+One of the way to create a Spark SQL context :
+----------------------------------------------
+--At the spark-prompt :
+val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+	
+
+import sqlContext.implicits._
+
+Load the emp.txt file :
+-----------------------
+val emp=sc.textFile("/user/training/emp.txt")
+	
+val dept=sc.textFile("/user/training/dept.txt")
+	
+emp.count()
+
+dept.count()
+
+emp.collect()
+
+dept.collect()
+
+emp.foreach(println)
+
+dept.foreach(println)
+
+emp.first()
+
+dept.first()	
+
+To remove the header row so that it is not considered as a part of the data :
+-----------------------------------------------------------------------------
+
+val header=emp.first()
+
+val headerd=dept.first()
+
+val empdata=emp.filter(a=>a!=header)
+	
+val deptdata=dept.filter(a=>a!=headerd)
+	
+Each line of RDD "emp" is treated as "a" and, 
+---------------------------------------------
+while creating RDD "empdata" only those lines or a are considered where a!=header
+----------------------------------------------------------------------------------
+empdata.collect()
+empdata.count()
+empdata.foreach(println)
+
+deptdata.collect()
+deptdata.count()
+deptdata.foreach(println)
+
+--------------------
+Creating a schema :
+--------------------
+case class employees(empno:String, ename:String, job:String, mgr:String, hiredate:String, sal:String, comm:String, deptno:String)
+
+defined class employees
+
+case class departments(deptno:String, dname:String, loc:String)
+
+defined class departments
+
+---------------------
+Creating a Dataframe :
+---------------------
+val edata=empdata.map(_.split(","))
+
+val ddata=deptdata.map(_.split(","))
+
+edata.count()
+
+ddata.count()
+
+edata.collect()
+
+ddata.collect()
+
+edata.foreach(println)
+
+--As the individual elements of edata/ddata are themselves as sub-arrays, only addresses of those sub-arrays are printed
+
+ddata.foreach(println)
+
+val epdata=edata.map(p=>employees(p(0),p(1),p(2),p(3),p(4),p(5),p(6),p(7)))
+		
+
+val dpdata=ddata.map(p=>departments(p(0),p(1),p(2)))
+
+--Here, treating each element or sub-array of RDD "edata/ddata" as p, it will fit each element of each sub-array of edata/ddata into the structure/fields of the earlier defined class employees/departments. Thus, each sub-array will now be fitted into the class employees/departments
+
+epdata.collect()
+
+dpdata.collect()
+
+--Thus, each element of edata/data, is an element of type "employees/departments", as fitted by the earlier command.
+
+epdata.count()
+
+dpdata.count()
+
+epdata.foreach(println)
+
+dpdata.foreach(println)
+
+-------------------------------------------------------
+Using the RDD.toDF() to convert a RDD to a Data-Frame :
+-------------------------------------------------------
+val emprows=epdata.toDF()
+
+--This will convert epdata to a DataFrame
+
+val deptrows=dpdata.toDF()
+
+--This will convert dpdata to a DataFrame
+
+To Print the schema :
+---------------------
+emprows.printSchema()
+
+deptrows.printSchema()
+
+emprows.count()
+
+deptrows.count()
+
+Registering the DataFrame "emprows" as a temporary Table named "emptable: to support SQL-type queries :
+-------------------------------------------------------------------------------------------------------
+
+emprows.registerTempTable("emptable")
+
+or
+
+epdata.toDF().registerTempTable("emptable1")
+
+Registering the DataFrame "deptrows" as a temporary Table named "depttable: to support SQL-type queries :
+---------------------------------------------------------------------------------------------------------
+
+deptrows.registerTempTable("depttable")
+
+val result1=sqlContext.sql("select deptno, count(*) as abc from emptable group by deptno")
+
+result1.collect
+
+val result2=sqlContext.sql("select * from depttable")
+
+result2.collect
+
+val result3=sqlContext.sql("select d.deptno,d.dname, count(*) as emp_count from emptable e join depttable d on e.deptno=d.deptno group by d.deptno, d.dname")
+
+result3.collect
+
